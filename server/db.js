@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS goals (
   deadline DATE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS no_interest_payment NUMERIC(14,2) DEFAULT 0;
 CREATE INDEX IF NOT EXISTS idx_tx_user_date ON transactions(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_msi_user ON msi_plans(user_id);
 `

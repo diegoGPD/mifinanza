@@ -7,7 +7,7 @@ router.use(requireAuth)
 
 // ---------- Definición de recursos (CRUD genérico, siempre filtrado por user_id) ----------
 const RESOURCES = {
-  cards: ['name', 'bank', 'last4', 'type', 'credit_limit', 'initial_balance', 'cut_day', 'pay_day', 'min_payment', 'color'],
+  cards: ['name', 'bank', 'last4', 'type', 'credit_limit', 'initial_balance', 'cut_day', 'pay_day', 'min_payment', 'no_interest_payment', 'color'],
   transactions: ['card_id', 'amount', 'description', 'category', 'kind', 'date'],
   msi_plans: ['card_id', 'description', 'category', 'total', 'months', 'start_date', 'paid_installments'],
   recurring: ['card_id', 'description', 'amount', 'category', 'day_of_month', 'active'],
@@ -134,8 +134,8 @@ router.post('/import', async (req, res) => {
     const idMap = {}
     for (const c of data.cards) {
       const { rows } = await client.query(
-        `INSERT INTO cards(user_id,name,bank,last4,type,credit_limit,initial_balance,cut_day,pay_day,min_payment,color) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-        [uid, c.name, c.bank, c.last4, c.type, c.credit_limit, c.initial_balance, c.cut_day, c.pay_day, c.min_payment, c.color]
+        `INSERT INTO cards(user_id,name,bank,last4,type,credit_limit,initial_balance,cut_day,pay_day,min_payment,no_interest_payment,color) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+        [uid, c.name, c.bank, c.last4, c.type, c.credit_limit, c.initial_balance, c.cut_day, c.pay_day, c.min_payment, c.no_interest_payment || 0, c.color]
       )
       idMap[c.id] = rows[0].id
     }

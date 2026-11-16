@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store.jsx'
 import { Modal, Input, Select, Segmented } from '../ui.jsx'
 import { CATEGORIES, todayISO, mxn, num } from '../lib.js'
+import { msiPlanFromExisting } from './Cards.jsx'
 
 const MSI_OPTIONS = [3, 6, 9, 12, 18, 24]
 
@@ -12,7 +13,7 @@ export default function QuickAdd({ onClose, defaultCard }) {
   const [kind, setKind] = useState('purchase')
   const [f, setF] = useState({
     card_id: defaultCard || cards[0]?.id || '', amount: '', description: '', category: 'comida', date: todayISO(),
-    months: 6, day_of_month: new Date().getDate(),
+    months: 6, charged: 0, day_of_month: new Date().getDate(),
   })
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -29,7 +30,8 @@ export default function QuickAdd({ onClose, defaultCard }) {
     try {
       if (kind === 'msi') {
         if (!card_id) throw new Error('Selecciona una tarjeta de crédito')
-        await create('msi_plans', { card_id, description: f.description, category: f.category, total: amount, months: Number(f.months), start_date: f.date, paid_installments: 0 })
+        if (num(f.charged) > 0) await create('msi_plans', msiPlanFromExisting(card_id, { description: f.description, category: f.category, total: amount, months: Number(f.months), charged: num(f.charged) }))
+        else await create('msi_plans', { card_id, description: f.description, category: f.category, total: amount, months: Number(f.months), start_date: f.date, paid_installments: 0 })
       } else if (kind === 'recurring') {
         await create('recurring', { card_id, description: f.description || 'Suscripción', amount, category: f.category, day_of_month: Number(f.day_of_month), active: true })
       } else {
@@ -61,12 +63,13 @@ export default function QuickAdd({ onClose, defaultCard }) {
               <div className="seg">{MSI_OPTIONS.map((m) => <button type="button" key={m} className={Number(f.months) === m ? 'active' : ''} onClick={() => setF({ ...f, months: m })}>{m}</button>)}</div>
             </div>
             {monthly > 0 && <div className="muted small">Mensualidad: <b className="num">{mxn(monthly)}</b> × {f.months} meses</div>}
+            <Input label="Mensualidades ya cobradas (0 si es compra nueva)" type="number" min="0" max={f.months} inputMode="numeric" value={f.charged} onChange={set('charged')} />
           </>
         )}
         {kind === 'recurring' ? (
           <Input label="Día del mes en que se cobra" type="number" min="1" max="31" value={f.day_of_month} onChange={set('day_of_month')} />
         ) : (
-          <Input label={kind === 'msi' ? 'Fecha de la primera mensualidad' : 'Fecha'} type="date" value={f.date} onChange={set('date')} required />
+          (kind !== 'msi' || num(f.charged) === 0) && <Input label={kind === 'msi' ? 'Fecha de la primera mensualidad' : 'Fecha'} type="date" value={f.date} onChange={set('date')} required />
         )}
         {err && <div className="error">{err}</div>}
         <button className="btn block" disabled={busy}>Guardar</button>

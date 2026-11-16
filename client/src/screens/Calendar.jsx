@@ -22,7 +22,7 @@ export default function Calendar() {
     const add = (day, e) => { const k = `${ym}-${String(day).padStart(2, '0')}`; (ev[k] ||= []).push(e) }
     for (const c of cards.filter((c) => c.type === 'credit')) {
       if (c.cut_day) add(clampDay(y, m, c.cut_day), { kind: 'corte', title: `Corte · ${c.name}`, color: c.color, amount: 0 })
-      if (c.pay_day) add(clampDay(y, m, c.pay_day), { kind: 'pago', title: `Fecha límite de pago · ${c.name}`, color: c.color, amount: num(c.min_payment) })
+      if (c.pay_day) add(clampDay(y, m, c.pay_day), { kind: 'pago', title: `Fecha límite de pago · ${c.name}`, color: c.color, amount: num(c.no_interest_payment) || num(c.min_payment), sub: num(c.no_interest_payment) ? 'pago sin intereses' : 'pago mínimo' })
     }
     for (const s of msiSchedule(msi_plans, cur)) {
       if (s.month !== ym) continue
@@ -85,7 +85,7 @@ export default function Calendar() {
             {selEvents.map((e, i) => (
               <div className="item" key={i}>
                 <span className="dot" style={{ background: KIND_COLOR[e.kind] }} />
-                <div className="main"><div className="title">{e.title}</div><div className="sub">{e.sub || ''}{e.kind === 'pago' && e.amount ? ' · pago mínimo' : ''}</div></div>
+                <div className="main"><div className="title">{e.title}</div><div className="sub">{e.sub || ''}</div></div>
                 {e.amount > 0 && <span className="amt num">{mxn(e.amount)}</span>}
               </div>
             ))}

@@ -2,19 +2,32 @@ import { useMemo, useState } from 'react'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useStore } from '../store.jsx'
 import { Modal, Input, Select, Segmented, Progress, Icon, ChartTooltip, Empty, Stat } from '../ui.jsx'
-import { mxn, mxn0, num, cardBalance, monthSpendByCategory, monthKey, catLabel, SERIES, CARD_COLORS, balanceSeries, fmtDate, msiRemaining, msiChargedCount, MONTHS, addMonths, parseISO } from '../lib.js'
+import { mxn, mxn0, num, cardBalance, monthSpendByCategory, monthKey, catLabel, SERIES, CARD_COLORS, balanceSeries, fmtDate, msiRemaining, msiChargedCount, MONTHS, addMonths, parseISO, iso } from '../lib.js'
 
 const axis = { fontSize: 11, fill: 'var(--muted)' }
+
+/** Plan MSI ya en curso: la mensualidad nº `charged` es la de este mes; las ya cobradas se marcan como pagadas (están en el saldo actual). */
+export function msiPlanFromExisting(card_id, r) {
+  const charged = Math.max(0, Math.min(num(r.months), num(r.charged)))
+  const first = charged === 0 ? addMonths(new Date(), 1) : addMonths(new Date(), -(charged - 1))
+  return {
+    card_id, description: r.description, category: r.category || 'otros', total: num(r.total), months: num(r.months),
+    start_date: iso(new Date(first.getFullYear(), first.getMonth(), Math.min(new Date().getDate(), 28))),
+    paid_installments: charged,
+  }
+}
 
 export function CardForm({ card, onDone }) {
   const { create, update, remove } = useStore()
   const [f, setF] = useState({
     name: card?.name || '', bank: card?.bank || '', last4: card?.last4 || '', type: card?.type || 'credit',
     credit_limit: card?.credit_limit || '', initial_balance: card?.initial_balance || '', cut_day: card?.cut_day || '',
-    pay_day: card?.pay_day || '', min_payment: card?.min_payment || '', color: card?.color || CARD_COLORS[0],
+    pay_day: card?.pay_day || '', min_payment: card?.min_payment || '', no_interest_payment: card?.no_interest_payment || '', color: card?.color || CARD_COLORS[0],
   })
+  const [msi, setMsi] = useState([]) // MSI en curso (solo al crear)
   const [err, setErr] = useState('')
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+  const setMsiRow = (i, k, v) => setMsi(msi.map((r, j) => (j === i ? { ...r, [k]: v } : r)))
 
   const submit = async (e) => {
     e.preventDefault()
@@ -26,11 +39,18 @@ export function CardForm({ card, onDone }) {
       cut_day: f.type === 'credit' ? num(f.cut_day) || null : null,
       pay_day: f.type === 'credit' ? num(f.pay_day) || null : null,
       min_payment: num(f.min_payment),
+      no_interest_payment: num(f.no_interest_payment),
       last4: String(f.last4).replace(/\D/g, '').slice(-4),
     }
     try {
       if (card) await update('cards', card.id, body)
-      else await create('cards', body)
+      else {
+        const created = await create('cards', body)
+        for (const r of msi) {
+          if (num(r.total) <= 0 || num(r.months) <= 0) continue
+          await create('msi_plans', msiPlanFromExisting(created.id, r))
+        }
+      }
       onDone()
     } catch (e) { setErr(e.message) }
   }
@@ -53,7 +73,33 @@ export function CardForm({ card, onDone }) {
             <Input label="Día de corte" type="number" min="1" max="31" inputMode="numeric" value={f.cut_day} onChange={set('cut_day')} required />
             <Input label="Día límite de pago" type="number" min="1" max="31" inputMode="numeric" value={f.pay_day} onChange={set('pay_day')} required />
           </div>
-          <Input label="Pago mínimo (MXN)" type="number" min="0" step="0.01" inputMode="decimal" value={f.min_payment} onChange={set('min_payment')} />
+          <div className="row">
+            <Input label="Pago para no generar intereses" type="number" min="0" step="0.01" inputMode="decimal" value={f.no_interest_payment} onChange={set('no_interest_payment')} />
+            <Input label="Pago mínimo" type="number" min="0" step="0.01" inputMode="decimal" value={f.min_payment} onChange={set('min_payment')} />
+          </div>
+          {!card && (
+            <div className="field">
+              <div className="row spread">
+                <label>Compras a MSI en curso</label>
+                <button type="button" className="btn ghost sm" onClick={() => setMsi([...msi, { description: '', total: '', months: 12, charged: 1 }])}><Icon name="plus" size={14} /> MSI</button>
+              </div>
+              {msi.map((r, i) => (
+                <div key={i} className="card flat" style={{ gap: 8, padding: 10, marginBottom: 8 }}>
+                  <div className="row">
+                    <Input label="Descripción" value={r.description} onChange={(e) => setMsiRow(i, 'description', e.target.value)} placeholder="Laptop, viaje…" />
+                    <Input label="Total (MXN)" type="number" min="0" step="0.01" inputMode="decimal" value={r.total} onChange={(e) => setMsiRow(i, 'total', e.target.value)} />
+                  </div>
+                  <div className="row">
+                    <Input label="Meses" type="number" min="1" max="48" inputMode="numeric" value={r.months} onChange={(e) => setMsiRow(i, 'months', e.target.value)} />
+                    <Input label="Ya cobradas" type="number" min="0" max={r.months} inputMode="numeric" value={r.charged} onChange={(e) => setMsiRow(i, 'charged', e.target.value)} />
+                    <button type="button" className="icon-btn" style={{ alignSelf: 'flex-end' }} onClick={() => setMsi(msi.filter((_, j) => j !== i))}><Icon name="trash" size={16} /></button>
+                  </div>
+                  {num(r.total) > 0 && num(r.months) > 0 && <div className="muted small">{mxn(num(r.total) / num(r.months))}/mes · faltan {Math.max(0, num(r.months) - num(r.charged))} mensualidades</div>}
+                </div>
+              ))}
+              {msi.length > 0 && <div className="muted small">El “Saldo actual” debe incluir ya las mensualidades cobradas hasta hoy; las que faltan se irán sumando cada mes.</div>}
+            </div>
+          )}
         </>
       ) : (
         <Input label="Saldo actual" type="number" min="0" step="0.01" inputMode="decimal" value={f.initial_balance} onChange={set('initial_balance')} />
@@ -155,7 +201,7 @@ function CardDetail({ card, onBack }) {
       {card.type === 'credit' && (
         <div className="grid c3">
           <Stat label="Corte" value={`Día ${card.cut_day || '—'}`} sub="de cada mes" />
-          <Stat label="Pago" value={`Día ${card.pay_day || '—'}`} sub={card.min_payment ? `Mínimo ${mxn0(card.min_payment)}` : 'de cada mes'} />
+          <Stat label="Pago" value={`Día ${card.pay_day || '—'}`} sub={[num(card.no_interest_payment) ? `Sin intereses ${mxn0(card.no_interest_payment)}` : '', num(card.min_payment) ? `Mínimo ${mxn0(card.min_payment)}` : ''].filter(Boolean).join(' · ') || 'de cada mes'} />
           <Stat label="MSI mensuales" value={mxn(monthlyMsi)} sub={`${plans.filter((p) => msiRemaining(p) > 0).length} planes activos`} />
         </div>
       )}
