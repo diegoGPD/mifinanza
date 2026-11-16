@@ -51,14 +51,23 @@ export const addMonths = (d, n) => {
 export const clampDay = (y, m, day) => Math.min(day || 1, daysInMonth(y, m))
 
 // ---------- Cálculos ----------
-/** Saldo actual de la tarjeta: saldo inicial + compras (incl. MSI mensuales ya cobradas) - pagos */
+/** Signo de un movimiento sobre el saldo de la tarjeta.
+ *  Crédito: saldo = deuda (compra suma, pago resta).
+ *  Débito: saldo = dinero a favor (compra resta, depósito/ingreso suma). */
+export function txDelta(card, t) {
+  const amt = num(t.amount)
+  if (card.type === 'debit') return t.kind === 'purchase' ? -amt : t.kind === 'payment' || t.kind === 'income' ? amt : 0
+  return t.kind === 'purchase' ? amt : t.kind === 'payment' ? -amt : 0
+}
+
+/** Saldo actual. Crédito: deuda pendiente (inicial + compras + MSI cobradas − pagos). Débito: fondos disponibles. */
 export function cardBalance(card, transactions, msiPlans) {
   let bal = num(card.initial_balance)
   for (const t of transactions) {
     if (t.card_id !== card.id) continue
-    if (t.kind === 'purchase') bal += num(t.amount)
-    else if (t.kind === 'payment') bal -= num(t.amount)
+    bal += txDelta(card, t)
   }
+  if (card.type === 'debit') return bal
   for (const p of msiPlans) {
     if (p.card_id !== card.id) continue
     // Las mensualidades de MSI ya cobradas forman parte del saldo pendiente de pago
@@ -130,11 +139,11 @@ export function balanceSeries(card, transactions, msiPlans, days = 60) {
   const current = cardBalance(card, transactions, msiPlans)
   const txs = transactions.filter((t) => t.card_id === card.id && parseISO(t.date) > start)
   let bal = current
-  for (const t of txs) bal -= t.kind === 'purchase' ? num(t.amount) : t.kind === 'payment' ? -num(t.amount) : 0
+  for (const t of txs) bal -= txDelta(card, t)
   const byDay = {}
   for (const t of txs) {
     const k = String(t.date).slice(0, 10)
-    byDay[k] = (byDay[k] || 0) + (t.kind === 'purchase' ? num(t.amount) : t.kind === 'payment' ? -num(t.amount) : 0)
+    byDay[k] = (byDay[k] || 0) + txDelta(card, t)
   }
   const out = []
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {

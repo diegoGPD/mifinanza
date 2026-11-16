@@ -11,12 +11,13 @@ export default function Dashboard({ onOpenCard }) {
   const { cards, transactions, msi_plans, settings } = data
 
   const totals = useMemo(() => {
-    let debt = 0, limit = 0
+    let debt = 0, limit = 0, funds = 0
     for (const c of cards) {
       const b = cardBalance(c, transactions, msi_plans)
       if (c.type === 'credit') { debt += Math.max(0, b); limit += num(c.credit_limit) }
+      else funds += b
     }
-    return { debt, available: Math.max(0, limit - debt), limit }
+    return { debt, available: Math.max(0, limit - debt), limit, funds, net: funds - debt }
   }, [cards, transactions, msi_plans])
 
   const monthly = useMemo(() => {
@@ -74,6 +75,7 @@ export default function Dashboard({ onOpenCard }) {
   return (
     <div className="page">
       <div className="grid c2">
+        <Stat label="Saldo en débito" value={mxn(totals.funds)} sub={`Neto (débito − deuda): ${mxn(totals.net)}`} tone={totals.funds > 0 ? 'pos' : ''} />
         <Stat label="Deuda total (crédito)" value={mxn(totals.debt)} sub={`Límite total ${mxn0(totals.limit)}`} tone={totals.debt > 0 ? '' : 'pos'} />
         <Stat label="Crédito disponible" value={mxn(totals.available)} sub={totals.limit ? `${Math.round((totals.available / totals.limit) * 100)}% libre` : 'Sin tarjetas de crédito'} />
         <Stat label="Gasto de hoy / permitido" value={`${mxn0(db.spentToday)} / ${mxn0(db.todayAllowance)}`}

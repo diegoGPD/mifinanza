@@ -95,7 +95,7 @@ function CardVisual({ card, balance, onClick }) {
           <Progress value={balance} max={limit} />
         </>
       ) : (
-        <div className="bottom"><div>Saldo<b className="num">{mxn(-balance)}</b></div></div>
+        <div className="bottom"><div>Saldo disponible<b className="num">{mxn(balance)}</b></div></div>
       )}
     </div>
   )
@@ -211,7 +211,7 @@ function CardDetail({ card, onBack }) {
               <div className="item" key={t.id}>
                 <div className="main">
                   <div className="title">{t.description || catLabel(t.category)}</div>
-                  <div className="sub">{fmtDate(t.date)} · {t.kind === 'payment' ? 'Pago a tarjeta' : t.kind === 'income' ? 'Ingreso' : catLabel(t.category)}</div>
+                  <div className="sub">{fmtDate(t.date)} · {t.kind === 'payment' ? (card.type === 'debit' ? 'Depósito' : 'Pago a tarjeta') : t.kind === 'income' ? 'Ingreso' : catLabel(t.category)}</div>
                 </div>
                 <span className={'amt num ' + (t.kind !== 'purchase' ? 'pos' : '')}>{t.kind === 'purchase' ? '−' : '+'}{mxn(t.amount)}</span>
                 <button className="icon-btn" onClick={() => window.confirm('¿Eliminar movimiento?') && remove('transactions', t.id)}><Icon name="trash" size={16} /></button>

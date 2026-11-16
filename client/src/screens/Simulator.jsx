@@ -71,7 +71,8 @@ export default function Simulator({ onClose }) {
             <table className="tbl">
               <thead><tr><th></th><th>Ahora</th><th>Después</th></tr></thead>
               <tbody>
-                {isCredit && <tr><td>Saldo de {card.name}</td><td className="num">{mxn(base.bal)}</td><td className="num">{mxn(cur.newBal)}</td></tr>}
+                {isCredit ? <tr><td>Saldo de {card.name}</td><td className="num">{mxn(base.bal)}</td><td className="num">{mxn(cur.newBal)}</td></tr>
+                  : card && <tr><td>Saldo de {card.name}</td><td className="num">{mxn(base.bal)}</td><td className={'num ' + (base.bal - amt < 0 ? 'neg' : '')}>{mxn(base.bal - amt)}</td></tr>}
                 {isCredit && <tr><td>Crédito disponible</td><td className="num">{mxn(base.avail)}</td><td className={'num ' + (cur.newAvail < 0 ? 'neg' : '')}>{mxn(cur.newAvail)}</td></tr>}
                 {isCredit && <tr><td>Uso del límite</td><td className="num">{base.limit ? Math.round((base.bal / base.limit) * 100) : 0}%</td><td className={'num ' + (pctLimit > 80 ? 'neg' : '')}>{Math.round(pctLimit)}%</td></tr>}
                 <tr><td>MSI comprometidos / mes</td><td className="num">{mxn(base.msiMonth)}</td><td className="num">{mxn(cur.newMsi)}</td></tr>
@@ -79,6 +80,7 @@ export default function Simulator({ onClose }) {
               </tbody>
             </table>
             {isCredit && cur.newAvail < 0 && <div className="error">Excede el límite de crédito por {mxn(-cur.newAvail)}.</div>}
+            {!isCredit && card && base.bal - amt < 0 && <div className="error">No alcanza el saldo de la tarjeta: faltan {mxn(amt - base.bal)}.</div>}
             {months === 1 && db.budget > 0 && amt > db.remaining && <div className="error">Supera lo que te queda del presupuesto mensual ({mxn(db.remaining)}).</div>}
           </div>
 

@@ -46,10 +46,10 @@ export default function QuickAdd({ onClose, defaultCard }) {
     <Modal title="Registrar" onClose={onClose}>
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Segmented value={kind} onChange={(v) => { setKind(v); setF({ ...f, card_id: v === 'msi' ? (credit[0]?.id || '') : f.card_id }) }} options={[
-          { value: 'purchase', label: 'Compra' }, { value: 'msi', label: 'MSI' }, { value: 'payment', label: 'Pago' }, { value: 'recurring', label: 'Recurrente' }, { value: 'income', label: 'Ingreso' },
+          { value: 'purchase', label: 'Compra' }, { value: 'msi', label: 'MSI' }, { value: 'payment', label: 'Pago/Depósito' }, { value: 'recurring', label: 'Recurrente' }, { value: 'income', label: 'Ingreso' },
         ]} />
         <Input label="Monto (MXN)" type="number" min="0" step="0.01" inputMode="decimal" value={f.amount} onChange={set('amount')} autoFocus required />
-        {kind !== 'income' && <Select label={kind === 'payment' ? 'Tarjeta que pagas' : 'Tarjeta'} value={f.card_id} onChange={set('card_id')} options={cardOpts(kind === 'msi' ? credit : cards)} />}
+        {kind !== 'income' && <Select label={kind === 'payment' ? 'Tarjeta (pago a crédito o depósito a débito)' : 'Tarjeta'} value={f.card_id} onChange={set('card_id')} options={cardOpts(kind === 'msi' ? credit : cards)} />}
         <Input label={kind === 'income' ? 'Concepto' : kind === 'payment' ? 'Nota' : 'Comercio / descripción'} value={f.description} onChange={set('description')} placeholder={kind === 'recurring' ? 'Netflix, luz, gym…' : ''} />
         {(kind === 'purchase' || kind === 'msi' || kind === 'recurring') && (
           <Select label="Categoría" value={f.category} onChange={set('category')} options={CATEGORIES} />
