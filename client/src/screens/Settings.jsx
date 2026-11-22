@@ -3,6 +3,7 @@ import { useStore } from '../store.jsx'
 import { Modal, Input, Segmented, Icon } from '../ui.jsx'
 import { api } from '../api.js'
 import { mxn, num, hourlyRate } from '../lib.js'
+import QuickLink from './QuickLink.jsx'
 
 export default function Settings({ onClose }) {
   const { data, saveSettings, logout, reload, user } = useStore()
@@ -61,6 +62,8 @@ export default function Settings({ onClose }) {
         <button className="btn block">Guardar</button>
         {msg && <div className="small pos">{msg}</div>}
       </form>
+      <div className="sep" />
+      <QuickLink />
       <div className="sep" />
       <h3>Respaldo</h3>
       <div className="row">

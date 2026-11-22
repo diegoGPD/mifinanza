@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from './store.jsx'
 import { Icon } from './ui.jsx'
 import Auth from './screens/Auth.jsx'
@@ -25,6 +25,18 @@ export default function App() {
   const [add, setAdd] = useState(false)
   const [sim, setSim] = useState(false)
   const [settings, setSettings] = useState(false)
+
+  // Acceso directo: /#registrar abre el formulario de registro
+  const ready = !!(user && data.settings?.setup_done)
+  useEffect(() => {
+    if (!ready) return
+    const check = () => {
+      if (location.hash === '#registrar') { setAdd(true); history.replaceState(null, '', location.pathname) }
+    }
+    check()
+    window.addEventListener('hashchange', check)
+    return () => window.removeEventListener('hashchange', check)
+  }, [ready])
 
   if (user === undefined || (user && !data.settings)) return <div className="auth"><div className="muted">Cargando…</div></div>
   if (!user) return <Auth />

@@ -49,6 +49,19 @@ client/   src/screens/*  Dashboard, Cards, Calendar, Goals, QuickAdd, Simulator,
 - `GET|PUT /settings`
 - `GET /export` / `POST /import` — respaldo JSON completo (import reemplaza los datos del usuario)
 
+## Enlace rápido (registrar sin abrir la app)
+
+Ajustes → **Enlace rápido** → Generar. Obtienes `https://<tu-dominio>/api/quick/<token>`:
+
+```
+GET  /api/quick/<token>?monto=250&desc=Oxxo&tarjeta=4417&categoria=comida
+POST /api/quick/<token>   {"monto": 250, "desc": "Oxxo", "tarjeta": "Oro", "tipo": "compra"}
+```
+
+- `monto` obligatorio; `tarjeta` = últimos 4 o nombre (opcional si solo tienes una); `tipo` = compra | pago/deposito | ingreso; `categoria`; `fecha` AAAA-MM-DD.
+- Responde JSON (o una página de confirmación si se abre en navegador). Regenerar o Desactivar invalida el anterior.
+- `https://<tu-dominio>/#registrar` abre directo el formulario de registro (útil como ícono en la pantalla de inicio).
+
 ## Notas de modelo
 
 - **Saldo de tarjeta** = saldo inicial + compras − pagos + mensualidades MSI ya cobradas y no pagadas.
